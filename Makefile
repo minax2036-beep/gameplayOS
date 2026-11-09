@@ -17,7 +17,9 @@ ASFLAGS := -mcpu=cortex-a76
 LDFLAGS := -T arch/aarch64/linker.ld -nostdlib -static \
            -Wl,--build-id=none -Wl,-Map,$(BUILD_DIR)/gameplayOS.map
 
-SOURCES := kernel/main.cpp
+SOURCES := kernel/main.cpp \
+            drivers/display/framebuffer.cpp \
+            drivers/display/dsi.cpp
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES)) \
            $(BUILD_DIR)/boot/start.o
 
