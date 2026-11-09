@@ -7,6 +7,7 @@ CONFIG="${ROOT_DIR}/config.txt"
 FIRMWARE_DIR="${RPI_FIRMWARE_BOOT_DIR:-}"
 
 IMAGE="${1:-${ROOT_DIR}/build/gameplayOS-rpi5.img}"
+BIN_IMAGE="${2:-${ROOT_DIR}/build/gameplayOS-rpi5.bin}"
 IMAGE_SIZE_MIB="${IMAGE_SIZE_MIB:-512}"
 PARTITION_OFFSET_BYTES=1048576
 
@@ -41,8 +42,8 @@ for tool in truncate sfdisk mformat mcopy; do
     }
 done
 
-mkdir -p "$(dirname "$IMAGE")"
-rm -f "$IMAGE"
+mkdir -p "$(dirname "$IMAGE")" "$(dirname "$BIN_IMAGE")"
+rm -f "$IMAGE" "$BIN_IMAGE"
 truncate -s "${IMAGE_SIZE_MIB}M" "$IMAGE"
 
 # Create an MBR partition table with one FAT32 boot partition.
@@ -59,5 +60,9 @@ mcopy -i "$PARTITION" "${FIRMWARE_DIR}/fixup4.dat" ::/fixup4.dat
 mcopy -i "$PARTITION" "${FIRMWARE_DIR}/bcm2712-rpi-5-b.dtb" ::/bcm2712-rpi-5-b.dtb
 mcopy -s -i "$PARTITION" "${FIRMWARE_DIR}/overlays" ::/overlays
 
+# The BIN file is the same raw disk image, not a renamed kernel binary.
+cp -- "$IMAGE" "$BIN_IMAGE"
+
 echo "Created Raspberry Pi 5 SD-card image: $IMAGE"
-ls -lh "$IMAGE"
+echo "Created raw BIN image: $BIN_IMAGE"
+ls -lh "$IMAGE" "$BIN_IMAGE"
