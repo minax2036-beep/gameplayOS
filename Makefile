@@ -5,6 +5,8 @@ OBJCOPY  := $(CROSS_COMPILE)objcopy
 BUILD_DIR := build
 TARGET    := $(BUILD_DIR)/kernel8.img
 ELF       := $(BUILD_DIR)/gameplayOS.elf
+SD_IMAGE  := $(BUILD_DIR)/gameplayOS-rpi5.img
+BIN_IMAGE := $(BUILD_DIR)/gameplayOS-rpi5.bin
 
 CXXFLAGS := -std=c++20 -O2 -Wall -Wextra \
             -ffreestanding -fno-exceptions -fno-rtti \
@@ -44,7 +46,7 @@ $(TARGET): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 
 sd-image: $(TARGET)
-	bash scripts/make-sd-image.sh
+	bash scripts/make-sd-image.sh "$(SD_IMAGE)" "$(BIN_IMAGE)"
 
 clean:
 	rm -rf $(BUILD_DIR)
