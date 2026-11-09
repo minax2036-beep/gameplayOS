@@ -46,6 +46,9 @@ void text(const Framebuffer& f,std::uint32_t x,std::uint32_t y,const char* s,Col
 Colour level_colour(LogLevel l){
  switch(l){case LogLevel::Success:return {0,220,100};case LogLevel::Warning:return {255,205,40};case LogLevel::Error:return {255,75,75};default:return WHITE;}
 }
+const char* level_name(LogLevel l){
+ switch(l){case LogLevel::Success:return "OK";case LogLevel::Warning:return "WARN";case LogLevel::Error:return "ERROR";default:return "INFO";}
+}
 }
 bool draw_boot_test_screen(const Framebuffer& f){
  if(!is_valid(f)||f.width<7||f.height<=LOG_HEIGHT)return false;
@@ -62,6 +65,7 @@ bool draw_boot_test_screen(const Framebuffer& f){
 }
 bool draw_boot_log(const Framebuffer& f,const BootLogEntry* entries,std::size_t count){
  if(!is_valid(f)||f.height<=LOG_HEIGHT)return false;
+ if(count>0&&entries==nullptr)return false;
  const std::uint32_t top=f.height-LOG_HEIGHT;
  rect(f,0,top,f.width,LOG_HEIGHT,BLACK);
  text(f,12,top+7,"GAMEPLAYOS BOOT LOG",{0,220,130});
@@ -70,8 +74,8 @@ bool draw_boot_log(const Framebuffer& f,const BootLogEntry* entries,std::size_t 
  const std::size_t first=count>MAX_LINES?count-MAX_LINES:0;
  for(std::size_t i=0;i<count-first;++i){
   const auto& e=entries[first+i]; const std::uint32_t y=top+25+static_cast<std::uint32_t>(i)*LINE_HEIGHT;
-  text(f,12,y,"[",GREY); text(f,24,y,"INFO",level_colour(e.level));
-  text(f,72,y,"]",GREY); text(f,90,y,e.message,level_colour(e.level));
+  text(f,12,y,"[",GREY); text(f,24,y,level_name(e.level),level_colour(e.level));
+  text(f,84,y,"]",GREY); text(f,102,y,e.message,level_colour(e.level));
  }
  return true;
 }
