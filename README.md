@@ -31,6 +31,17 @@ We will bring up the display in small, testable steps. Raspberry Pi 5's boot fir
 - Initial display: 7-inch DSI display
 - Initial debugging: UART where available
 
+## Build artifacts
+
+GitHub Actions creates these files:
+
+- `gameplayOS-rpi5.bin`: raw Raspberry Pi 5 disk image, intended for tools that accept local `.bin` images such as Chromebook Recovery Utility.
+- `gameplayOS-rpi5.img`: identical raw disk image with the conventional `.img` extension.
+- `kernel8.img`: kernel binary only; this is not the complete disk image.
+- `gameplayOS.elf`: linked ELF file for debugging.
+
+The `.bin` and `.img` disk images contain the same bytes. The extension does not change the image format.
+
 ## Boot files
 
 The Raspberry Pi 5 boot partition requires a `config.txt`. The firmware normally looks for `kernel_2712.img`, then falls back to `kernel8.img`. This project initially uses `kernel8.img` for a simpler 4 KiB-page bring-up target.
