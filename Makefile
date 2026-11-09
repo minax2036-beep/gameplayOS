@@ -24,7 +24,7 @@ SOURCES := kernel/main.cpp \
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES)) \
            $(BUILD_DIR)/boot/start.o
 
-.PHONY: all clean
+.PHONY: all clean sd-image
 
 all: $(TARGET)
 
