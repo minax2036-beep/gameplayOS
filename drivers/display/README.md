@@ -1,15 +1,27 @@
 # Display bring-up
 
-The first display target is the 7-inch DSI panel connected to the Raspberry Pi 5.
+The first display target is the user's Freenove 7-inch IPS DSI touchscreen (Amazon listing B0B44VZTRG; FNK0078 family).
+
+## Confirmed panel properties
+
+- Display size: 7 inch
+- Resolution: 800 x 480
+- Panel type: IPS
+- Interface: MIPI DSI
+- Touch: 5-point capacitive
+- Board target: Raspberry Pi 5
+
+The exact DSI lane count, panel controller, DSI pixel format, command sequence, reset/power control, and timing values are not yet confirmed. Do not guess these values or enable the panel driver until they are verified from the matching FNK0078 manual/schematic.
 
 ## Added code
 
 - `framebuffer.hpp/.cpp`: validated framebuffer descriptor and RGBX, BGRX, and RGB565 pixel writes.
 - `dsi.hpp/.cpp`: DSI initialization interface. It currently returns `NotImplemented` rather than touching unknown hardware registers.
+- `panel_profile.hpp`: confirmed 800x480 resolution and five touch points; intentionally leaves DSI lane count unknown.
 
 ## Planned stages
 
-1. Confirm the exact panel model and which Pi 5 DSI connector is used.
+1. Obtain and inspect the exact FNK0078 tutorial/manual and identify the panel controller, DSI lane count, and power/reset wiring.
 2. Determine whether the boot firmware provides a usable framebuffer to the bare-metal kernel.
 3. Read and validate framebuffer address, dimensions, pitch, and pixel format.
 4. Draw a solid test colour through the framebuffer module.
