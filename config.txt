@@ -1,0 +1,6 @@
+# gameplayOS - Raspberry Pi 5
+arm_64bit=1
+kernel=kernel8.img
+
+# Enable the RP1 UART0 early-boot setup for optional debugging.
+enable_rp1_uart=1
