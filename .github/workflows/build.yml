@@ -1,0 +1,49 @@
+name: Build gameplayOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout gameplayOS
+        uses: actions/checkout@v4
+
+      - name: Install build and image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            g++-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            dosfstools \
+            mtools \
+            fdisk
+
+      - name: Build AArch64 kernel
+        run: make clean all
+
+      - name: Fetch Raspberry Pi firmware files
+        run: |
+          git clone --depth 1 https://github.com/raspberrypi/firmware.git /tmp/rpi-firmware
+          echo "RPI_FIRMWARE_BOOT_DIR=/tmp/rpi-firmware/boot" >> "$GITHUB_ENV"
+
+      - name: Create Raspberry Pi 5 SD-card image
+        run: make sd-image
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gameplayOS-rpi5-${{ github.sha }}
+          path: |
+            build/kernel8.img
+            build/gameplayOS.elf
+            build/gameplayOS-rpi5.img
+          if-no-files-found: error
+          retention-days: 14
