@@ -43,5 +43,8 @@ $(ELF): $(OBJECTS) arch/aarch64/linker.ld
 $(TARGET): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 
+sd-image: $(TARGET)
+	bash scripts/make-sd-image.sh
+
 clean:
 	rm -rf $(BUILD_DIR)
