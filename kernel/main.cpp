@@ -1,26 +1,28 @@
-#include <cstdint>
-
-#include "drivers/uart/uart.hpp"
+#include "drivers/display/boot_screen.hpp"
+#include "drivers/display/firmware_framebuffer.hpp"
 
 extern "C" void kernel_main()
 {
-    using gameplayos::drivers::uart::Result;
+    using namespace gameplayos::display;
 
-    const Result uart_result =
-        gameplayos::drivers::uart::initialize(9600);
+    Framebuffer framebuffer{};
 
-    if (uart_result == Result::Ok) {
-        gameplayos::drivers::uart::write_line("");
-        gameplayos::drivers::uart::write_line("================================");
-        gameplayos::drivers::uart::write_line("gameplayOS - Raspberry Pi 5");
-        gameplayos::drivers::uart::write_line("AArch64 kernel entered C++.");
-        gameplayos::drivers::uart::write_line("RP1 UART0 TX: GPIO14 / pin 8");
-        gameplayos::drivers::uart::write_line("UART: 9600 baud, 8-N-1");
-        gameplayos::drivers::uart::write_line("UART initialization: OK");
-        gameplayos::drivers::uart::write_line("================================");
+    if (firmware_framebuffer::initialize(framebuffer)) {
+        draw_boot_test_screen(framebuffer);
+
+        constexpr BootLogEntry boot_log[] = {
+            {LogLevel::Success, "FIRMWARE FRAMEBUFFER READY"},
+            {LogLevel::Info, "GAMEPLAYOS KERNEL STARTED"}
+        };
+
+        draw_boot_log(
+            framebuffer,
+            boot_log,
+            sizeof(boot_log) / sizeof(boot_log[0])
+        );
     }
 
-    // Keep the primary CPU alive. The first UART test is one-shot at boot.
+    // Keep the primary CPU alive after the one-shot display initialization.
     for (;;) {
         asm volatile("wfe");
     }
