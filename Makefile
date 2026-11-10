@@ -22,6 +22,7 @@ LDFLAGS := -T arch/aarch64/linker.ld -nostdlib -static \
 SOURCES := kernel/main.cpp \
             drivers/uart/uart.cpp \
             drivers/display/framebuffer.cpp \
+            drivers/display/firmware_framebuffer.cpp \
             drivers/display/boot_screen.cpp \
             drivers/display/dsi.cpp
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES)) \
