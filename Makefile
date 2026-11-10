@@ -13,13 +13,14 @@ CXXFLAGS := -std=c++20 -O2 -Wall -Wextra \
             -fno-stack-protector -fno-pic -fno-pie \
             -fno-threadsafe-statics -nostdlib \
             -mcpu=cortex-a76 -mgeneral-regs-only \
-            -Ikernel -Iinclude
+            -I. -Ikernel -Iinclude
 
 ASFLAGS := -mcpu=cortex-a76
 LDFLAGS := -T arch/aarch64/linker.ld -nostdlib -static \
            -Wl,--build-id=none -Wl,-Map,$(BUILD_DIR)/gameplayOS.map
 
 SOURCES := kernel/main.cpp \
+            drivers/uart/uart.cpp \
             drivers/display/framebuffer.cpp \
             drivers/display/boot_screen.cpp \
             drivers/display/dsi.cpp
