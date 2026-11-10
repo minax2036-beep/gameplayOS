@@ -125,7 +125,7 @@ Result initialize(
 Result set_brightness(Controller& controller, std::uint8_t brightness)
 {
     if (!controller.initialized) {
-        return Result::InvalidTransport;
+        return Result::NotInitialized;
     }
 
     if (!write_register(
