@@ -101,22 +101,22 @@ Result initialize(
     if (!write_register(transport, address, REG_PORTC, 0)) {
         return Result::I2cError;
     }
-    transport.delay_ms(5);
+    transport.delay_ms(transport.context, 5);
 
     if (!write_register(transport, address, REG_PORTA, PA_LCD_LR)) {
         return Result::I2cError;
     }
-    transport.delay_ms(5);
+    transport.delay_ms(transport.context, 5);
 
     if (!write_register(transport, address, REG_PORTB, PB_LCD_MAIN)) {
         return Result::I2cError;
     }
-    transport.delay_ms(5);
+    transport.delay_ms(transport.context, 5);
 
     if (!write_register(transport, address, REG_PORTC, PC_LED_EN)) {
         return Result::I2cError;
     }
-    transport.delay_ms(80);
+    transport.delay_ms(transport.context, 80);
 
     controller.initialized = true;
     return set_brightness(controller, 0xFF);
