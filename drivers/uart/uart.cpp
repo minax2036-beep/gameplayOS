@@ -29,8 +29,8 @@ constexpr std::uintptr_t UartIcr          = Uart0Base + 0x044;
 
 constexpr std::uint32_t GpioFuncSelMask   = 0x1FU;
 constexpr std::uint32_t GpioFuncUart0Tx   = 4U; // GPIO14 ALT4 = UART0_TX
-constexpr std::uint32_t GpioOutOverMask   = 3U << 12;
-constexpr std::uint32_t GpioOeOverMask    = 3U << 14;
+constexpr std::uint32_t GpioOutOverMask   = 3U << 8;
+constexpr std::uint32_t GpioOeOverMask    = 3U << 12;
 constexpr std::uint32_t PadOutputDisable  = 1U << 7;
 
 constexpr std::uint32_t UartFrBusy         = 1U << 3;
@@ -100,6 +100,7 @@ Result initialize(std::uint32_t baud_rate, std::uint32_t uart_clock_hz)
 
     // Disable the UART before changing its line and baud-rate settings.
     reg(UartCr) = 0;
+    reg(UartLcrH) = 0; // Disable FIFO while changing line settings.
     memory_barrier();
 
     // Wait briefly for a character already in progress to finish.
