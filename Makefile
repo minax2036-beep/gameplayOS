@@ -24,7 +24,8 @@ SOURCES := kernel/main.cpp \
             drivers/display/framebuffer.cpp \
             drivers/display/firmware_framebuffer.cpp \
             drivers/display/boot_screen.cpp \
-            drivers/display/dsi.cpp
+            drivers/display/dsi.cpp \
+            drivers/display/attiny_backlight.cpp
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES)) \
            $(BUILD_DIR)/boot/start.o
 
