@@ -14,7 +14,29 @@ Hello from AArch64!
 
 The current bring-up branch requests a 32-bit framebuffer from the Raspberry Pi firmware using the property-mailbox interface, then connects it to the existing pixel and boot-screen renderers.
 
-This is an experimental first step, not proof that the DSI panel is working. Raspberry Pi 5 firmware supports only a subset of the older property tags, and the display pipeline/panel initialization is separate. The framebuffer request and the Freenove DSI panel output still need real-hardware verification.
+A firmware framebuffer allocation is not proof that the DSI panel is initialized. The RP1 DSI host, TC358762 bridge, panel power sequence, and display timing must be handled separately.
+
+## Confirmed Linux display reference
+
+The connected panel was observed working under Ubuntu on the target Raspberry Pi 5. The active Linux DRM state reported:
+
+| Property | Observed value |
+|---|---:|
+| Connector | DSI-1 |
+| Resolution | 800x480 |
+| Refresh rate | approximately 60.03 Hz |
+| Pixel clock | 30 MHz |
+| Horizontal display / front porch / sync / back porch | 800 / 131 / 2 / 45 |
+| Vertical display / front porch / sync / back porch | 480 / 7 / 2 / 22 |
+| DSI host | RP1 DSI (`drm-rp1-dsi`) |
+| DSI bridge | Toshiba TC358762 |
+| DSI data lanes | 1 |
+| DRM pixel format | XR24 (little-endian XRGB8888; memory byte order B, G, R, X) |
+| Framebuffer pitch | 3200 bytes |
+
+The timing values are recorded in `drivers/display/dsi.cpp` as a reference configuration. The DRM mode string was `800x480: 60 30000 800 931 933 978 480 487 489 511`.
+
+The DSI driver currently validates this configuration only. It does **not** program RP1 registers, initialize the D-PHY, configure TC358762, or power on the panel. Those operations must not be guessed: they will be implemented only after checking the matching Linux driver and panel power sequence.
 
 ## Current development stage
 
@@ -23,9 +45,12 @@ This is an experimental first step, not proof that the DSI panel is working. Ras
 - [x] Existing boot-screen text renderer
 - [x] Raspberry Pi 5 firmware framebuffer request (experimental; not yet hardware-verified)
 - [x] Kernel calls the framebuffer and boot-screen code
+- [x] Record the observed 800x480 Linux DSI timing as a native driver reference
+- [x] Add validation for DSI panel timing configuration
 - [ ] Verify the firmware mailbox request on Raspberry Pi 5 hardware
-- [ ] Verify that the Freenove DSI panel displays the framebuffer
-- [ ] Implement panel-specific DSI initialization if firmware hand-off is insufficient
+- [ ] Verify that the bare-metal kernel can display pixels on the DSI panel
+- [ ] Implement and verify RP1 DSI host / D-PHY initialization
+- [ ] Implement and verify TC358762 bridge and panel power sequencing
 
 ## Target
 
