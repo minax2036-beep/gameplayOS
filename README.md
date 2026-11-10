@@ -12,16 +12,20 @@ Kernel initialized.
 Hello from AArch64!
 ```
 
-We will bring up the display in small, testable steps. Raspberry Pi 5's boot firmware and display pipeline differ from older Pi models, so the DSI framebuffer path will be implemented only after its hand-off and display mode are verified.
+The current bring-up branch requests a 32-bit framebuffer from the Raspberry Pi firmware using the property-mailbox interface, then connects it to the existing pixel and boot-screen renderers.
+
+This is an experimental first step, not proof that the DSI panel is working. Raspberry Pi 5 firmware supports only a subset of the older property tags, and the display pipeline/panel initialization is separate. The framebuffer request and the Freenove DSI panel output still need real-hardware verification.
 
 ## Current development stage
 
 - [x] Repository initialized
-- [ ] AArch64 boot entry and linker layout
-- [ ] Minimal freestanding kernel
-- [ ] Raspberry Pi 5 display/framebuffer hand-off
-- [ ] Text renderer
-- [ ] DSI text output
+- [x] Existing framebuffer pixel renderer
+- [x] Existing boot-screen text renderer
+- [x] Raspberry Pi 5 firmware framebuffer request (experimental; not yet hardware-verified)
+- [x] Kernel calls the framebuffer and boot-screen code
+- [ ] Verify the firmware mailbox request on Raspberry Pi 5 hardware
+- [ ] Verify that the Freenove DSI panel displays the framebuffer
+- [ ] Implement panel-specific DSI initialization if firmware hand-off is insufficient
 
 ## Target
 
@@ -29,7 +33,7 @@ We will bring up the display in small, testable steps. Raspberry Pi 5's boot fir
 - Architecture: AArch64
 - Kernel: C++ (freestanding)
 - Initial display: 7-inch DSI display
-- Initial debugging: UART where available
+- Initial debugging: display-first; UART is not required for this milestone
 
 ## Build artifacts
 
