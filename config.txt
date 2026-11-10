@@ -2,5 +2,9 @@
 arm_64bit=1
 kernel=kernel8.img
 
-# Enable the RP1 UART0 early-boot setup for optional debugging.
+# Keep RP1 and its PCIe BAR mapping alive for bare-metal MMIO access.
+pciex4_reset=0
+
+# Initialise RP1 UART0 for early boot diagnostics on GPIO14/15.
+# Firmware UART starts at 115200 baud; gameplayOS reconfigures it to 9600.
 enable_rp1_uart=1
