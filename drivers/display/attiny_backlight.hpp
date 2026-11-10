@@ -20,6 +20,7 @@ struct I2cTransport {
 enum class Result : std::uint8_t {
     Ok,
     InvalidTransport,
+    NotInitialized,
     InvalidAddress,
     I2cError,
     UnsupportedController
