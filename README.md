@@ -12,7 +12,8 @@ GameplayOS uses Linux as its hardware and process foundation, while presenting i
 - System builder: Buildroot 2026.08.1
 - Init: GameplayOS-owned PID 1
 - Target UI: native GameplayOS process
-- Display target: Freenove 7-inch DSI panel, 800×480
+- Display: Freenove FNK007B 7-inch DSI panel, 800×480
+- Display stack: VC4 DRM/KMS + Toshiba TC358762 DSI-to-DPI bridge
 
 ## Shell-free system policy
 
@@ -24,20 +25,23 @@ Build tools remain on the development host and are not copied into the Raspberry
 
 ## Current milestone
 
-This branch establishes the first Buildroot-based bootable system structure:
+This branch establishes the first Buildroot-based system structure and DSI hardware configuration:
 
 - [x] Buildroot external tree
 - [x] Raspberry Pi 5 configuration
 - [x] Custom PID 1 with no shell fallback
 - [x] Native UI process placeholder
-- [x] Minimal Linux display / framebuffer configuration fragment
+- [x] Linux DRM/KMS and VC4 display configuration
+- [x] Toshiba TC358762 bridge and simple-panel drivers enabled
+- [x] Raspberry Pi 7-inch DSI device-tree overlay enabled
 - [x] GitHub Actions build workflow
 - [ ] Verify the image boots on the Raspberry Pi 5
+- [ ] Verify the DSI panel is detected and the backlight turns on
 - [ ] Draw the first native UI on the 800×480 DSI display
 - [ ] Implement input handling and the boot screen
 - [ ] Add Safe Mode and Recovery UI
 
-The current UI process is intentionally a placeholder. It writes a status message to the kernel console and waits; graphical output is the next implementation step.
+The DSI setup uses the Raspberry Pi vc4-kms-dsi-7inch device-tree overlay, which describes the TC358762 bridge, panel power/backlight controller, and compatible touch controller. The current UI process is still a placeholder; graphical output is the next implementation step.
 
 ## Build on the development host
 
