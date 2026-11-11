@@ -20,10 +20,13 @@ LDFLAGS := -T arch/aarch64/linker.ld -nostdlib -static \
            -Wl,--build-id=none -Wl,-Map,$(BUILD_DIR)/gameplayOS.map
 
 SOURCES := kernel/main.cpp \
+            kernel/memory.cpp \
             drivers/uart/uart.cpp \
             drivers/display/framebuffer.cpp \
+            drivers/display/firmware_framebuffer.cpp \
             drivers/display/boot_screen.cpp \
-            drivers/display/dsi.cpp
+            drivers/display/dsi.cpp \
+            drivers/display/attiny_backlight.cpp
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES)) \
            $(BUILD_DIR)/boot/start.o
 
