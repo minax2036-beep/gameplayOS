@@ -1,0 +1,5 @@
+menu "GameplayOS"
+
+source "$BR2_EXTERNAL_GAMEPLAYOS_PATH/package/gameplayos-core/Config.in"
+
+endmenu
