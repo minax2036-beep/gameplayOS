@@ -1,0 +1,81 @@
+name: Build GameplayOS (Buildroot)
+
+on:
+  push:
+    branches:
+      - linux/buildroot-base
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Config.in"
+      - "external.*"
+      - "configs/**"
+      - "package/**"
+      - "board/gameplayos/**"
+      - ".github/workflows/build-buildroot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-rpi5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout GameplayOS
+        uses: actions/checkout@v4
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc \
+            build-essential \
+            cpio \
+            file \
+            libncurses-dev \
+            rsync \
+            unzip \
+            wget
+
+      - name: Fetch Buildroot
+        run: |
+          git clone --depth 1 --branch 2026.08.1 \
+            https://gitlab.com/buildroot.org/buildroot.git buildroot
+
+      - name: Configure GameplayOS
+        run: |
+          make -C buildroot O="$GITHUB_WORKSPACE/output" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE" gameplayos_rpi5_defconfig
+
+      - name: Build
+        run: |
+          make -C buildroot O="$GITHUB_WORKSPACE/output" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE" \
+            -j2
+
+      - name: Verify shell-free target
+        run: |
+          test -x output/target/sbin/init
+          test -x output/target/usr/bin/gameplayos-ui
+          if find output/target -type f -o -type l | grep -E '/(sh|bash|ash|busybox)$'; then
+            echo "Unexpected shell or BusyBox executable found."
+            exit 1
+          fi
+          echo "No interactive shell or BusyBox command suite found."
+
+      - name: List image artifacts
+        run: |
+          find output/images -maxdepth 1 -type f -printf '%f %s bytes\\n' | sort
+
+      - name: Upload Raspberry Pi 5 image
+        uses: actions/upload-artifact@v4
+        with:
+          name: gameplayOS-buildroot-rpi5-${{ github.sha }}
+          path: |
+            output/images/*
+          if-no-files-found: error
+          retention-days: 14
