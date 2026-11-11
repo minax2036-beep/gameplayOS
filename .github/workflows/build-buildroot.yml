@@ -41,6 +41,22 @@ jobs:
             unzip \
             wget
 
+      # Keep downloaded source archives and Buildroot's compiled output
+      # between workflow runs. The restore prefix allows reuse after
+      # configuration changes; Buildroot will re-check/rebuild as needed.
+      - name: Restore Buildroot cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildroot-dl
+            output/build
+            output/host
+            output/staging
+            output/target
+          key: ${{ runner.os }}-gameplayos-buildroot-2026.08.1-${{ hashFiles('configs/gameplayos_rpi5_defconfig', 'board/gameplayos/rpi5/**', 'package/gameplayos-core/**') }}
+          restore-keys: |
+            ${{ runner.os }}-gameplayos-buildroot-2026.08.1-
+
       - name: Fetch Buildroot
         run: |
           git clone --depth 1 --branch 2026.08.1 \
@@ -49,12 +65,15 @@ jobs:
       - name: Configure GameplayOS
         run: |
           make -C buildroot O="$GITHUB_WORKSPACE/output" \
-            BR2_EXTERNAL="$GITHUB_WORKSPACE" gameplayos_rpi5_defconfig
+            BR2_EXTERNAL="$GITHUB_WORKSPACE" \
+            BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
+            gameplayos_rpi5_defconfig
 
       - name: Build
         run: |
           make -C buildroot O="$GITHUB_WORKSPACE/output" \
             BR2_EXTERNAL="$GITHUB_WORKSPACE" \
+            BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
             -j2
 
       - name: Verify shell-free target
