@@ -12,7 +12,7 @@ GameplayOS uses Linux as its hardware and process foundation, while presenting i
 - System builder: Buildroot 2026.08.1
 - Init: GameplayOS-owned PID 1
 - Target UI: native GameplayOS process
-- Display: Freenove FNK007B 7-inch DSI panel, 800×480
+- Display: Freenove FNK0078B 7-inch DSI panel, 800×480
 - Display stack: VC4 DRM/KMS + Toshiba TC358762 DSI-to-DPI bridge
 
 ## Shell-free system policy
