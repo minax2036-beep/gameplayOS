@@ -1,0 +1,9 @@
+# GameplayOS Raspberry Pi 5 boot configuration
+kernel=Image
+arm_64bit=1
+
+# Enable the VC4 DRM/KMS graphics stack and the 7-inch DSI panel.
+dtoverlay=vc4-kms-v3d
+dtoverlay=vc4-kms-dsi-7inch
+
+disable_overscan=1
