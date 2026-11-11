@@ -9,6 +9,8 @@ BR2_TARGET_GENERIC_ISSUE="GameplayOS"
 BR2_INIT_NONE=y
 # GameplayOS uses its own PID 1; do not install BusyBox or its applets.
 # BR2_PACKAGE_BUSYBOX is not set
+# Do not let Buildroot select Bash as the default /bin/sh when BusyBox is disabled.
+BR2_SYSTEM_BIN_SH_NONE=y
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_GAMEPLAYOS_PATH)/board/gameplayos/rpi5/rootfs-overlay"
 
