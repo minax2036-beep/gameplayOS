@@ -60,7 +60,8 @@ jobs:
             output/host
             output/staging
             output/target
-          key: ${{ runner.os }}-gameplayos-buildroot-2026.08.1-${{ hashFiles('configs/gameplayos_rpi5_defconfig', 'board/gameplayos/rpi5/**', 'package/gameplayos-core/**') }}
+            output/images
+          key: ${{ runner.os }}-gameplayos-buildroot-2026.08.1-v2-${{ hashFiles('configs/gameplayos_rpi5_defconfig', 'board/gameplayos/rpi5/**', 'package/gameplayos-core/**', '.github/workflows/build-buildroot.yml') }}
           restore-keys: |
             ${{ runner.os }}-gameplayos-buildroot-2026.08.1-
 
@@ -75,6 +76,17 @@ jobs:
             BR2_EXTERNAL="$GITHUB_WORKSPACE" \
             BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
             gameplayos_rpi5_defconfig
+
+      # The previous cache omitted output/images while retaining Buildroot's
+      # .stamp_images_installed markers. That can make Buildroot skip copying
+      # firmware/config files into an empty images directory. Re-run only the
+      # image-install phase; compiled packages remain cached.
+      - name: Refresh cached image outputs
+        run: |
+          set -eu
+          mkdir -p output/images
+          find output/build -mindepth 2 -maxdepth 2 -type f \\
+            -name .stamp_images_installed -delete
 
       - name: Build
         run: |
