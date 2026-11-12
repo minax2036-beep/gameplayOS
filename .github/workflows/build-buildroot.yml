@@ -1,0 +1,125 @@
+name: Build GameplayOS (Buildroot)
+
+on:
+  push:
+    branches:
+      - linux/buildroot-base
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Config.in"
+      - "external.*"
+      - "configs/**"
+      - "package/**"
+      - "board/gameplayos/**"
+      - ".github/workflows/build-buildroot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-rpi5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout GameplayOS
+        uses: actions/checkout@v4
+
+      # The hosted Ubuntu runner already contains the Buildroot host tools.
+      # Avoid apt entirely so transient Ubuntu mirror/DNS failures cannot
+      # block the build before Buildroot starts.
+      - name: Check preinstalled host dependencies
+        run: |
+          set -eu
+          required_tools="gcc g++ make bash patch gzip bzip2 perl tar cpio unzip rsync file bc find wget python3 openssl"
+          missing=""
+          for tool in $required_tools; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "Missing required host tool: $tool"
+              missing="yes"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "The GitHub Actions runner is missing required Buildroot host tools."
+            exit 1
+          fi
+          echo "All required Buildroot host tools are already available."
+
+      # Reuse downloads and compiled Buildroot output between runs.
+      # The exact key changes when build configuration or package sources change;
+      # restore-keys still allow reuse of the closest previous cache.
+      - name: Restore Buildroot cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildroot-dl
+            output/build
+            output/host
+            output/staging
+            output/target
+            output/images
+          key: ${{ runner.os }}-gameplayos-buildroot-2026.08.1-v2-${{ hashFiles('configs/gameplayos_rpi5_defconfig', 'board/gameplayos/rpi5/**', 'package/gameplayos-core/**', '.github/workflows/build-buildroot.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-gameplayos-buildroot-2026.08.1-
+
+      - name: Fetch Buildroot
+        run: |
+          git clone --depth 1 --branch 2026.08.1 \
+            https://gitlab.com/buildroot.org/buildroot.git buildroot
+
+      - name: Configure GameplayOS
+        run: |
+          make -C buildroot O="$GITHUB_WORKSPACE/output" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE" \
+            BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
+            gameplayos_rpi5_defconfig
+
+      # Clear image-install stamps so missing generated image files are rebuilt.
+      - name: Refresh cached image outputs
+        run: |
+          set -eu
+          mkdir -p output/images
+          find output/build -mindepth 2 -maxdepth 2 -type f -name .stamp_images_installed -delete
+
+      - name: Build
+        run: |
+          make -C buildroot O="$GITHUB_WORKSPACE/output" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE" \
+            BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
+            -j"$(nproc)"
+
+      - name: Verify shell-free target
+        run: |
+          test -x output/target/sbin/init
+          test -x output/target/usr/bin/gameplayos-ui
+          if find output/target -type f -o -type l | grep -E '/(sh|bash|ash|busybox)$'; then
+            echo "Unexpected shell or BusyBox executable found."
+            exit 1
+          fi
+          echo "No interactive shell or BusyBox command suite found."
+
+      # The recovery utility expects one raw image file. Keep the original
+      # Buildroot image name internally, but publish a single .bin asset.
+      - name: Prepare single Chromebook image
+        run: |
+          set -eu
+          test -s output/images/sdcard.img
+          cp output/images/sdcard.img gameplayOS.bin
+          ls -lh gameplayOS.bin
+          sha256sum gameplayOS.bin
+
+      # GitHub Actions artifacts are downloaded as ZIP files. A Release asset
+      # is downloadable directly as gameplayOS.bin without extracting an archive.
+      - name: Publish direct BIN download
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gameplayos-build-${{ github.run_number }}
+          name: GameplayOS build #${{ github.run_number }}
+          prerelease: true
+          make_latest: false
+          files: gameplayOS.bin
+          overwrite_files: true
