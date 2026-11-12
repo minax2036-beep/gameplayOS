@@ -77,16 +77,12 @@ jobs:
             BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
             gameplayos_rpi5_defconfig
 
-      # The previous cache omitted output/images while retaining Buildroot's
-      # .stamp_images_installed markers. That can make Buildroot skip copying
-      # firmware/config files into an empty images directory. Re-run only the
-      # image-install phase; compiled packages remain cached.
+      # Clear image-install stamps so missing generated image files are rebuilt.
       - name: Refresh cached image outputs
         run: |
           set -eu
           mkdir -p output/images
-          find output/build -mindepth 2 -maxdepth 2 -type f \\
-            -name .stamp_images_installed -delete
+          find output/build -mindepth 2 -maxdepth 2 -type f -name .stamp_images_installed -delete
 
       - name: Build
         run: |
