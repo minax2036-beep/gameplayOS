@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-rpi5:
@@ -28,6 +28,9 @@ jobs:
       - name: Checkout GameplayOS
         uses: actions/checkout@v4
 
+      # The hosted Ubuntu runner already contains the Buildroot host tools.
+      # Avoid apt entirely so transient Ubuntu mirror/DNS failures cannot
+      # block the build before Buildroot starts.
       - name: Check preinstalled host dependencies
         run: |
           set -eu
@@ -45,9 +48,9 @@ jobs:
           fi
           echo "All required Buildroot host tools are already available."
 
-      # Keep downloaded source archives and Buildroot's compiled output
-      # between workflow runs. The restore prefix allows reuse after
-      # configuration changes; Buildroot will re-check/rebuild as needed.
+      # Reuse downloads and compiled Buildroot output between runs.
+      # The exact key changes when build configuration or package sources change;
+      # restore-keys still allow reuse of the closest previous cache.
       - name: Restore Buildroot cache
         uses: actions/cache@v4
         with:
@@ -78,7 +81,7 @@ jobs:
           make -C buildroot O="$GITHUB_WORKSPACE/output" \
             BR2_EXTERNAL="$GITHUB_WORKSPACE" \
             BR2_DL_DIR="$GITHUB_WORKSPACE/.buildroot-dl" \
-            -j2
+            -j"$(nproc)"
 
       - name: Verify shell-free target
         run: |
@@ -90,15 +93,25 @@ jobs:
           fi
           echo "No interactive shell or BusyBox command suite found."
 
-      - name: List image artifacts
+      # The recovery utility expects one raw image file. Keep the original
+      # Buildroot image name internally, but publish a single .bin asset.
+      - name: Prepare single Chromebook image
         run: |
-          find output/images -maxdepth 1 -type f -printf '%f %s bytes\\n' | sort
+          set -eu
+          test -s output/images/sdcard.img
+          cp output/images/sdcard.img gameplayOS.bin
+          ls -lh gameplayOS.bin
+          sha256sum gameplayOS.bin
 
-      - name: Upload Raspberry Pi 5 image
-        uses: actions/upload-artifact@v4
+      # GitHub Actions artifacts are downloaded as ZIP files. A Release asset
+      # is downloadable directly as gameplayOS.bin without extracting an archive.
+      - name: Publish direct BIN download
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
         with:
-          name: gameplayOS-buildroot-rpi5-${{ github.sha }}
-          path: |
-            output/images/*
-          if-no-files-found: error
-          retention-days: 14
+          tag_name: gameplayos-build-${{ github.run_number }}
+          name: GameplayOS build #${{ github.run_number }}
+          prerelease: true
+          make_latest: false
+          files: gameplayOS.bin
+          overwrite_files: true
