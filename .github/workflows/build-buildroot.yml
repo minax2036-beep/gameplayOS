@@ -28,18 +28,22 @@ jobs:
       - name: Checkout GameplayOS
         uses: actions/checkout@v4
 
-      - name: Install host dependencies
+      - name: Check preinstalled host dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            bc \
-            build-essential \
-            cpio \
-            file \
-            libncurses-dev \
-            rsync \
-            unzip \
-            wget
+          set -eu
+          required_tools="gcc g++ make bash patch gzip bzip2 perl tar cpio unzip rsync file bc find wget python3 openssl"
+          missing=""
+          for tool in $required_tools; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "Missing required host tool: $tool"
+              missing="yes"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "The GitHub Actions runner is missing required Buildroot host tools."
+            exit 1
+          fi
+          echo "All required Buildroot host tools are already available."
 
       # Keep downloaded source archives and Buildroot's compiled output
       # between workflow runs. The restore prefix allows reuse after
