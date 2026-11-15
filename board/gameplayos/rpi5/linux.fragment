@@ -4,10 +4,13 @@ CONFIG_PROC_FS=y
 CONFIG_SYSFS=y
 CONFIG_TMPFS=y
 
-# Raspberry Pi 5 DSI display pipeline (Freenove FNK0078B / 7-inch 800x480)
+# HDMI display path: DRM/KMS with fbdev compatibility device (/dev/fb0).
 CONFIG_DRM=y
 CONFIG_DRM_VC4=y
 CONFIG_DRM_FBDEV_EMULATION=y
+CONFIG_FB=y
+
+# Retain DSI-related drivers for later re-enablement.
 CONFIG_DRM_PANEL_SIMPLE=y
 CONFIG_DRM_TOSHIBA_TC358762=y
 CONFIG_BACKLIGHT_CLASS_DEVICE=y
