@@ -1,0 +1,3 @@
+# GameplayOS Raspberry Pi 5 kernel command line
+# The test image is booted from a USB mass-storage device.
+console=tty1 root=/dev/sda2 rootwait rw loglevel=8 ignore_loglevel initcall_debug
