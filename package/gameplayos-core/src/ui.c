@@ -3,12 +3,17 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/fb.h>
+#include <linux/input.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#define MAX_INPUTS 16
+#define CATEGORY_COUNT 6
 
 struct framebuffer {
     int fd;
@@ -38,6 +43,19 @@ static const uint8_t font[36][5] = {
     {0x18,0x14,0x12,0x7f,0x10}, {0x27,0x45,0x45,0x45,0x39},
     {0x3c,0x4a,0x49,0x49,0x30}, {0x01,0x71,0x09,0x05,0x03},
     {0x36,0x49,0x49,0x49,0x36}, {0x06,0x49,0x49,0x29,0x1e}
+};
+
+static const char *categories[CATEGORY_COUNT] = {
+    "GAME", "NETWORK", "MUSIC", "VIDEO", "SETTINGS", "SYSTEM"
+};
+
+static const char *items[CATEGORY_COUNT][4] = {
+    {"GAMES", "MEMORY CARD", "GAME DATA", "GAME OPTIONS"},
+    {"NETWORK STATUS", "DOWNLOADS", "NETWORK OPTIONS", "CONNECTION INFO"},
+    {"MUSIC PLAYER", "MUSIC FILES", "PLAYLISTS", "AUDIO OPTIONS"},
+    {"VIDEO PLAYER", "VIDEO FILES", "VIDEO OPTIONS", "DISPLAY INFO"},
+    {"SYSTEM SETTINGS", "DISPLAY SETTINGS", "SOUND SETTINGS", "INPUT SETTINGS"},
+    {"SYSTEM INFORMATION", "STORAGE INFORMATION", "RESTART", "ABOUT GAMEPLAYOS"}
 };
 
 static uint32_t component(uint8_t value, struct fb_bitfield field)
@@ -112,20 +130,120 @@ static void draw_text(struct framebuffer *fb, int x, int y,
     }
 }
 
-static void draw_tile(struct framebuffer *fb, int x, int y, int w, int h,
-                      const char *label, int selected)
+static void draw_circle(struct framebuffer *fb, int cx, int cy, int radius,
+                        uint8_t r, uint8_t g, uint8_t b)
 {
-    fill_rect(fb, x, y, w, h, 25, 38, 59);
-    fill_rect(fb, x, y, w, 3, selected ? 50 : 39,
-              selected ? 205 : 105, selected ? 220 : 150);
-    if (selected) {
-        fill_rect(fb, x, y, 3, h, 50, 205, 220);
-        fill_rect(fb, x + w - 3, y, 3, h, 50, 205, 220);
-        fill_rect(fb, x, y + h - 3, w, 3, 50, 205, 220);
+    int x, y;
+    for (y = -radius; y <= radius; ++y)
+        for (x = -radius; x <= radius; ++x)
+            if (x * x + y * y <= radius * radius)
+                put_pixel(fb, cx + x, cy + y, r, g, b);
+}
+
+static void draw_wave(struct framebuffer *fb, int base, int phase,
+                      uint8_t r, uint8_t g, uint8_t b)
+{
+    static const int wave[32] = {
+        0, 3, 6, 9, 11, 13, 14, 15, 15, 14, 13, 11, 9, 6, 3, 0,
+        -3, -6, -9, -11, -13, -14, -15, -15, -14, -13, -11, -9, -6, -3, 0, 0
+    };
+    int x, y, previous = base + wave[(phase / 7) % 32];
+    for (x = 1; x < (int)fb->var.xres; ++x) {
+        y = base + wave[((x + phase) / 7) % 32];
+        if (y > previous) {
+            int yy;
+            for (yy = previous; yy <= y; ++yy)
+                put_pixel(fb, x, yy, r, g, b);
+        } else {
+            int yy;
+            for (yy = y; yy <= previous; ++yy)
+                put_pixel(fb, x, yy, r, g, b);
+        }
+        previous = y;
     }
-    draw_text(fb, x + 22, y + (h - 14) / 2, label, 2,
-              selected ? 255 : 215, selected ? 255 : 225,
-              selected ? 255 : 238);
+}
+
+static void draw_background(struct framebuffer *fb)
+{
+    int y, x;
+    int height = (int)fb->var.yres;
+    int width = (int)fb->var.xres;
+
+    for (y = 0; y < height; ++y) {
+        uint8_t r = (uint8_t)(5 + (y * 5) / (height ? height : 1));
+        uint8_t g = (uint8_t)(12 + (y * 15) / (height ? height : 1));
+        uint8_t b = (uint8_t)(48 + (y * 45) / (height ? height : 1));
+        fill_rect(fb, 0, y, width, 1, r, g, b);
+    }
+
+    for (x = 0; x < 4; ++x)
+        draw_wave(fb, height - 90 - x * 27, x * 19,
+                  (uint8_t)(12 + x * 5), (uint8_t)(55 + x * 8),
+                  (uint8_t)(115 + x * 12));
+}
+
+static void draw_category(struct framebuffer *fb, int index, int x, int y,
+                          int selected)
+{
+    int radius = selected ? 15 : 10;
+    draw_circle(fb, x, y, radius,
+                selected ? 65 : 75,
+                selected ? 205 : 105,
+                selected ? 245 : 150);
+    draw_circle(fb, x, y, selected ? 7 : 4, 225, 245, 255);
+    draw_text(fb, x - 22, y + 25, categories[index], 1,
+              selected ? 235 : 145,
+              selected ? 250 : 175,
+              selected ? 255 : 205);
+}
+
+static void draw_screen(struct framebuffer *fb, int category, int selected)
+{
+    int width = (int)fb->var.xres;
+    int height = (int)fb->var.yres;
+    int i, top, left, row_height;
+
+    draw_background(fb);
+
+    draw_text(fb, 28, 22, "GAMEPLAYOS", 2, 235, 247, 255);
+    draw_text(fb, 30, 42, "XMB INTERFACE", 1, 95, 190, 235);
+    fill_rect(fb, 28, 61, width - 56, 1, 75, 135, 190);
+
+    top = 112;
+    left = width / 12;
+    for (i = 0; i < CATEGORY_COUNT; ++i) {
+        int x = left + i * ((width - 2 * left) / (CATEGORY_COUNT - 1));
+        draw_category(fb, i, x, top, i == category);
+    }
+
+    fill_rect(fb, 28, 160, width - 56, 1, 65, 115, 160);
+    draw_text(fb, 52, 181, categories[category], 2, 175, 225, 255);
+
+    row_height = height < 400 ? 43 : 52;
+    top = 222;
+    for (i = 0; i < 4; ++i) {
+        int y = top + i * row_height;
+        if (i == selected) {
+            fill_rect(fb, 36, y - 7, width - 72, row_height - 2,
+                      20, 85, 145);
+            fill_rect(fb, 36, y - 7, 4, row_height - 2,
+                      80, 220, 255);
+            draw_text(fb, 57, y + 5, ">", 1, 255, 255, 255);
+            draw_text(fb, 79, y + 5, items[category][i], 1,
+                      255, 255, 255);
+        } else {
+            draw_text(fb, 79, y + 5, items[category][i], 1,
+                      175, 205, 230);
+        }
+    }
+
+    fill_rect(fb, 28, height - 34, width - 56, 1, 65, 115, 160);
+    draw_text(fb, 30, height - 24, "ARROWS SELECT", 1,
+              125, 170, 205);
+    draw_text(fb, width - 112, height - 24, "GAMEPLAYOS", 1,
+              125, 170, 205);
+
+    (void)msync(fb->memory, fb->length, MS_ASYNC);
 }
 
 static int open_framebuffer(struct framebuffer *fb)
@@ -153,60 +271,93 @@ static int open_framebuffer(struct framebuffer *fb)
     return 0;
 }
 
+static int open_input_devices(int fds[MAX_INPUTS])
+{
+    int i, count = 0;
+    char path[32];
+
+    for (i = 0; i < MAX_INPUTS; ++i) {
+        (void)snprintf(path, sizeof(path), "/dev/input/event%d", i);
+        fds[i] = open(path, O_RDONLY | O_NONBLOCK);
+        if (fds[i] >= 0) ++count;
+    }
+    return count;
+}
+
 int main(void)
 {
     struct framebuffer fb;
-    char status[96];
-    int width, height, margin, gap, tile_w, tile_h, start_y;
+    struct pollfd pollfds[MAX_INPUTS];
+    int input_fds[MAX_INPUTS];
+    int category = 0, selected = 0;
+    int i, count;
 
     if (open_framebuffer(&fb) < 0) {
         int fd = open("/dev/console", O_WRONLY);
         if (fd >= 0) {
             static const char msg[] =
-                "\n[gameplayOS] /dev/fb0 is unavailable. "
-                "Enable DRM fbdev emulation to show the launcher.\n";
+                "\n[gameplayOS] /dev/fb0 is unavailable.\n";
             (void)write(fd, msg, sizeof(msg) - 1);
             close(fd);
         }
         for (;;) pause();
     }
 
-    width = (int)fb.var.xres;
-    height = (int)fb.var.yres;
-    fill_rect(&fb, 0, 0, width, height, 11, 17, 29);
+    for (i = 0; i < MAX_INPUTS; ++i) input_fds[i] = -1;
+    (void)open_input_devices(input_fds);
 
-    fill_rect(&fb, 0, 0, width, 7, 35, 190, 215);
-    draw_text(&fb, 28, 28, "GAMEPLAYOS", 3, 245, 250, 255);
-    draw_text(&fb, 30, 58, "LAUNCHER", 1, 115, 190, 210);
+    count = 0;
+    for (i = 0; i < MAX_INPUTS; ++i) {
+        if (input_fds[i] >= 0) {
+            pollfds[count].fd = input_fds[i];
+            pollfds[count].events = POLLIN;
+            pollfds[count].revents = 0;
+            ++count;
+        }
+    }
 
-    margin = width / 20;
-    if (margin < 16) margin = 16;
-    gap = width / 35;
-    if (gap < 12) gap = 12;
-    tile_w = (width - margin * 2 - gap) / 2;
-    tile_h = (height - 150) / 2;
-    if (tile_h > 105) tile_h = 105;
-    if (tile_h < 48) tile_h = 48;
-    start_y = height / 3;
-    if (start_y + tile_h * 2 + gap > height - 35)
-        start_y = height - tile_h * 2 - gap - 35;
+    draw_screen(&fb, category, selected);
 
-    draw_tile(&fb, margin, start_y, tile_w, tile_h, "GAMES", 1);
-    draw_tile(&fb, margin + tile_w + gap, start_y,
-              tile_w, tile_h, "FILES", 0);
-    draw_tile(&fb, margin, start_y + tile_h + gap,
-              tile_w, tile_h, "SETTINGS", 0);
-    draw_tile(&fb, margin + tile_w + gap, start_y + tile_h + gap,
-              tile_w, tile_h, "SYSTEM INFO", 0);
+    for (;;) {
+        int result = poll(pollfds, (nfds_t)count, 500);
+        int changed = 0;
 
-    fill_rect(&fb, 0, height - 28, width, 1, 45, 65, 85);
-    draw_text(&fb, margin, height - 20, "HDMI EDITION", 1,
-              115, 145, 165);
-    (void)snprintf(status, sizeof(status), "DISPLAY %ux%u",
-                   fb.var.xres, fb.var.yres);
-    draw_text(&fb, width - margin - (int)strlen(status) * 6,
-              height - 20, status, 1, 115, 145, 165);
+        if (result <= 0) continue;
 
-    (void)msync(fb.memory, fb.length, MS_SYNC);
-    for (;;) pause();
+        for (i = 0; i < count; ++i) {
+            if (pollfds[i].revents & POLLIN) {
+                struct input_event event;
+                while (read(pollfds[i].fd, &event, sizeof(event)) ==
+                       (ssize_t)sizeof(event)) {
+                    if (event.type != EV_KEY || event.value != 1) continue;
+
+                    switch (event.code) {
+                    case KEY_LEFT:
+                        category = (category + CATEGORY_COUNT - 1) %
+                                   CATEGORY_COUNT;
+                        selected = 0;
+                        changed = 1;
+                        break;
+                    case KEY_RIGHT:
+                        category = (category + 1) % CATEGORY_COUNT;
+                        selected = 0;
+                        changed = 1;
+                        break;
+                    case KEY_UP:
+                        selected = (selected + 3) % 4;
+                        changed = 1;
+                        break;
+                    case KEY_DOWN:
+                        selected = (selected + 1) % 4;
+                        changed = 1;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (changed) draw_screen(&fb, category, selected);
+    }
 }
