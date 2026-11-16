@@ -1,0 +1,6 @@
+config BR2_PACKAGE_GAMEPLAYOS_CORE
+	bool "gameplayos-core"
+	help
+	  Installs the GameplayOS PID 1 and the first native UI process.
+	  No interactive shell or general-purpose command interpreter is
+	  included in the target image.

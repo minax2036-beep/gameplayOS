@@ -1,0 +1,3 @@
+# GameplayOS Raspberry Pi 5 kernel command line
+# HDMI launcher mode: keep the boot console quiet after the native UI starts.
+console=tty1 root=/dev/sda2 rootwait rw quiet loglevel=3 vt.global_cursor_default=0

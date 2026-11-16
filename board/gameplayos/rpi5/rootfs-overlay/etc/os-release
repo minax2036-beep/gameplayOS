@@ -1,0 +1,4 @@
+NAME="GameplayOS"
+ID=gameplayos
+PRETTY_NAME="GameplayOS for Raspberry Pi 5"
+VERSION="0.1.0-dev"
