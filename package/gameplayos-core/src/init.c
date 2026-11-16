@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <unistd.h>
 
 static void ensure_directory(const char *path)
@@ -26,6 +27,19 @@ static void mount_virtual_fs(const char *source,
     }
 }
 
+static void silence_console_input(int fd)
+{
+    struct termios settings;
+
+    if (tcgetattr(fd, &settings) < 0) return;
+
+    settings.c_lflag &= (tcflag_t)~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    settings.c_iflag &= (tcflag_t)~(IXON | ICRNL | INLCR);
+    settings.c_cc[VMIN] = 1;
+    settings.c_cc[VTIME] = 0;
+    (void)tcsetattr(fd, TCSANOW, &settings);
+}
+
 int main(void)
 {
     int console_fd;
@@ -40,12 +54,11 @@ int main(void)
 
     console_fd = open("/dev/console", O_RDWR);
     if (console_fd >= 0) {
+        silence_console_input(console_fd);
         (void)dup2(console_fd, STDIN_FILENO);
         (void)dup2(console_fd, STDOUT_FILENO);
         (void)dup2(console_fd, STDERR_FILENO);
-        if (console_fd > STDERR_FILENO) {
-            close(console_fd);
-        }
+        if (console_fd > STDERR_FILENO) close(console_fd);
     }
 
     puts("");
@@ -53,7 +66,7 @@ int main(void)
     puts("          gameplayOS");
     puts("       Linux system base");
     puts("================================");
-    puts("Starting the native system UI...");
+    puts("Starting the native XMB interface...");
 
     {
         char *const argv[] = { (char *)"gameplayos-ui", NULL };
@@ -70,7 +83,5 @@ int main(void)
             "gameplayOS init: UI launch failed: %d\n", errno);
     puts("Recovery state: the UI process could not be started.");
 
-    for (;;) {
-        pause();
-    }
+    for (;;) pause();
 }
