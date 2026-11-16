@@ -183,18 +183,21 @@ static void draw_background(struct framebuffer *fb)
 }
 
 static void draw_category(struct framebuffer *fb, int index, int x, int y,
-                          int selected)
+                          int selected, int scale)
 {
-    int radius = selected ? 15 : 10;
+    int radius = selected ? 21 * scale : 14 * scale;
+    int label_width = (int)strlen(categories[index]) * 6 * scale;
     draw_circle(fb, x, y, radius,
                 selected ? 65 : 75,
                 selected ? 205 : 105,
                 selected ? 245 : 150);
-    draw_circle(fb, x, y, selected ? 7 : 4, 225, 245, 255);
-    draw_text(fb, x - 22, y + 25, categories[index], 1,
-              selected ? 235 : 145,
-              selected ? 250 : 175,
-              selected ? 255 : 205);
+    draw_circle(fb, x, y, selected ? 9 * scale : 6 * scale,
+                225, 245, 255);
+    draw_text(fb, x - label_width / 2, y + radius + 10 * scale,
+              categories[index], scale,
+              selected ? 245 : 155,
+              selected ? 252 : 190,
+              selected ? 255 : 220);
 }
 
 static void draw_screen(struct framebuffer *fb, int category, int selected)
@@ -202,46 +205,55 @@ static void draw_screen(struct framebuffer *fb, int category, int selected)
     int width = (int)fb->var.xres;
     int height = (int)fb->var.yres;
     int i, top, left, row_height;
+    int scale = width >= 1280 ? 2 : 1;
+    int margin = width >= 1280 ? 48 : 28;
+    int header_scale = width >= 1280 ? 3 : 2;
 
     draw_background(fb);
 
-    draw_text(fb, 28, 22, "GAMEPLAYOS", 2, 235, 247, 255);
-    draw_text(fb, 30, 42, "XMB INTERFACE", 1, 95, 190, 235);
-    fill_rect(fb, 28, 61, width - 56, 1, 75, 135, 190);
+    draw_text(fb, margin, 24, "GAMEPLAYOS", header_scale,
+              245, 250, 255);
+    draw_text(fb, margin + 2, 27 + 8 * header_scale,
+              "XMB INTERFACE", scale, 105, 195, 245);
+    fill_rect(fb, margin, 32 + 9 * header_scale,
+              width - 2 * margin, 1, 75, 145, 205);
 
-    top = 112;
+    top = height >= 700 ? 175 : 112;
     left = width / 12;
     for (i = 0; i < CATEGORY_COUNT; ++i) {
         int x = left + i * ((width - 2 * left) / (CATEGORY_COUNT - 1));
-        draw_category(fb, i, x, top, i == category);
+        draw_category(fb, i, x, top, i == category, scale);
     }
 
-    fill_rect(fb, 28, 160, width - 56, 1, 65, 115, 160);
-    draw_text(fb, 52, 181, categories[category], 2, 175, 225, 255);
+    fill_rect(fb, margin, height >= 700 ? 265 : 160,
+              width - 2 * margin, 1, 65, 125, 180);
+    draw_text(fb, margin + 24, height >= 700 ? 282 : 181,
+              categories[category], scale + 1, 185, 230, 255);
 
-    row_height = height < 400 ? 43 : 52;
-    top = 222;
+    row_height = height >= 700 ? 76 : (height < 400 ? 43 : 52);
+    top = height >= 700 ? 340 : 222;
     for (i = 0; i < 4; ++i) {
         int y = top + i * row_height;
         if (i == selected) {
-            fill_rect(fb, 36, y - 7, width - 72, row_height - 2,
-                      20, 85, 145);
-            fill_rect(fb, 36, y - 7, 4, row_height - 2,
-                      80, 220, 255);
-            draw_text(fb, 57, y + 5, ">", 1, 255, 255, 255);
-            draw_text(fb, 79, y + 5, items[category][i], 1,
-                      255, 255, 255);
+            fill_rect(fb, margin + 8, y - 9,
+                      width - 2 * (margin + 8), row_height - 4,
+                      20, 85, 155);
+            fill_rect(fb, margin + 8, y - 9, 6, row_height - 4,
+                      90, 225, 255);
+            draw_text(fb, margin + 30, y + 5, items[category][i],
+                      scale, 255, 255, 255);
         } else {
-            draw_text(fb, 79, y + 5, items[category][i], 1,
-                      175, 205, 230);
+            draw_text(fb, margin + 30, y + 5, items[category][i],
+                      scale, 185, 215, 240);
         }
     }
 
-    fill_rect(fb, 28, height - 34, width - 56, 1, 65, 115, 160);
-    draw_text(fb, 30, height - 24, "ARROWS SELECT", 1,
-              125, 170, 205);
-    draw_text(fb, width - 112, height - 24, "GAMEPLAYOS", 1,
-              125, 170, 205);
+    fill_rect(fb, margin, height - 48, width - 2 * margin, 1,
+              65, 125, 180);
+    draw_text(fb, margin + 2, height - 34, "ARROWS SELECT",
+              scale, 145, 190, 225);
+    draw_text(fb, width - margin - 160 * scale, height - 34,
+              "GAMEPLAYOS", scale, 145, 190, 225);
 
     (void)msync(fb->memory, fb->length, MS_ASYNC);
 }
